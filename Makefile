@@ -6,17 +6,13 @@ down:
 	docker compose down
 
 validate:
-	curl http://localhost:11434/api/tags
-
-show_models:
-	docker exec -it ollama ollama list
-
-setup_ollama:
-	docker exec -it ollama ollama pull qwen2.5-coder:7b
-	docker exec -it ollama ollama pull qwen2.5-coder:3b
+	curl http://localhost:8080/health
 
 install_zed:
 	curl -f https://zed.dev/install.sh | sh
+
+install_opencode:
+	curl -fsSL https://opencode.ai/install | bash
 
 check_gpu:
 	@echo "Checking GPU setup..."
@@ -38,3 +34,8 @@ check_gpu:
 		echo "         sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit"; \
 		echo "         sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker"; \
 	fi
+
+test_model:
+	curl http://localhost:8080/v1/chat/completions \
+	-H "Content-Type: application/json" \
+	-d '{"model":"Qwopus3.5-9B-coder-Exp-Q4_K_M", "messages":[{"role":"user","content":"Write hello world in Python"}]}'

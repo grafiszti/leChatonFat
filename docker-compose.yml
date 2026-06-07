@@ -1,17 +1,16 @@
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    container_name: llama-cpp
     restart: unless-stopped
+
     ports:
-      - "11434:11434"
+      - "8080:8080"
+
     volumes:
-      - ollama_data:/root/.ollama
-    environment:
-      - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_GPU=1
-      - OLLAMA_NUM_PARALLEL=2
-      - OLLAMA_FLASH_ATTENTION=1
+      - ./models:/models
+      - llama_cache:/root/.cache/llama.cpp
+
     deploy:
       resources:
         reservations:
@@ -20,5 +19,21 @@ services:
               count: all
               capabilities: [gpu]
 
+#    command: >
+#      -m /models/Qwopus3.5-9B-coder-Exp-Q4_K_M.gguf
+#      --host 0.0.0.0
+#      --port 8080
+#      --ctx-size 32768
+#      --n-gpu-layers 99
+
+    command: >
+      -m /models/Qwopus3.5-9B-coder-Exp-Q4_K_M.gguf
+      --host 0.0.0.0
+      --port 8080
+      --ctx-size 16384
+      --n-gpu-layers 99
+      --flash-attn on
+      --threads 12
+
 volumes:
-  ollama_data:
+  llama_cache:
