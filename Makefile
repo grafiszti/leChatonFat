@@ -8,9 +8,6 @@ down:
 validate:
 	curl http://localhost:8080/health
 
-install_zed:
-	curl -f https://zed.dev/install.sh | sh
-
 install_opencode:
 	curl -fsSL https://opencode.ai/install | bash
 
@@ -35,7 +32,7 @@ check_gpu:
 		echo "         sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker"; \
 	fi
 
-test_model:
+smoke_test:
 	curl http://localhost:8080/v1/chat/completions \
 	-H "Content-Type: application/json" \
 	-d '{"model":"Qwopus3.5-9B-coder-Exp-Q4_K_M", "messages":[{"role":"user","content":"Write hello world in Python"}]}'
