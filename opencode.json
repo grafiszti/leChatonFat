@@ -9,14 +9,14 @@
         "baseURL": "http://localhost:8080/v1"
       },
       "models": {
-        "Qwopus3.5-9B-coder-Exp-Q4_K_M": {
-          "name": "Qwopus3.5-9B"
+        "gemma-4-12b-it-Q3_K_M": {
+          "name": "gemma-4-12b"
         }
       }
     }
   },
 
-  "model": "llamacpp/Qwopus3.5-9B-coder-Exp-Q4_K_M",
+  "model": "llamacpp/gemma-4-12b-it-Q3_K_M",
 
   "disabled_providers": [
     "openai",

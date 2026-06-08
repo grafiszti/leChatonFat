@@ -1,6 +1,6 @@
 services:
   llama:
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    build: .
     container_name: llama-cpp
     restart: unless-stopped
 
@@ -11,6 +11,9 @@ services:
       - ./models:/models
       - llama_cache:/root/.cache/llama.cpp
 
+    env_file:
+      - .env
+
     deploy:
       resources:
         reservations:
@@ -18,22 +21,6 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-
-#    command: >
-#      -m /models/Qwopus3.5-9B-coder-Exp-Q4_K_M.gguf
-#      --host 0.0.0.0
-#      --port 8080
-#      --ctx-size 32768
-#      --n-gpu-layers 99
-
-    command: >
-      -m /models/Qwopus3.5-9B-coder-Exp-Q4_K_M.gguf
-      --host 0.0.0.0
-      --port 8080
-      --ctx-size 16384
-      --n-gpu-layers 99
-      --flash-attn on
-      --threads 12
 
 volumes:
   llama_cache:
