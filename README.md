@@ -30,10 +30,9 @@ You can adjust these settings in `docker-compose.yml` based on your GPU memory a
 | `make up`               | Start the Ollama container                           |
 | `make down`             | Turn off the Ollama container                        |
 | `make validate`         | Check if Ollama is running and list available models |
-| `make show_models`      | List available models                                |
-| `make setup_ollama`     | Download Qwen Coder models (7b and 3b)               |
 | `make install_opencode` | Install Opencode                                     |
 | `make check_gpu`        | Verify GPU setup and NVIDIA runtime configuration    |
+| `make smoke_test`       | Run a sample chat completion request                 |
 
 ## Troubleshooting
 ### GPU Not Detected
@@ -46,7 +45,7 @@ If GPU acceleration isn't working:
 
 2. Check NVIDIA Container Toolkit installation:
    ```bash
-   make check-gpu
+    make check_gpu
    ```
 
 3. Restart Docker after installing the toolkit:
