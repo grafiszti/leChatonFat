@@ -24,12 +24,15 @@ echo ""
 # Run the server
 exec /app/llama-server \
     -m "$MODEL_PATH" \
-    --host "$HOST" \
-    --port "$PORT" \
-    --ctx-size "$CTX_SIZE" \
-    --flash-attn "$FLASH_ATTN" \
+    --host 0.0.0.0 \
+    --port 8080 \
+    --ctx-size 16384 \
+    --flash-attn on \
     --batch-size 1024 \
     --cache-type-k q4_0 \
     --cache-type-v q4_0 \
     --no-mmap \
-    --threads "$THREADS"
+    --parallel 1 \
+    --cache-ram 0 \
+    --n-gpu-layers 999 \
+    --threads 12
