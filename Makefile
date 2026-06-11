@@ -36,3 +36,6 @@ smoke_test:
 	curl http://localhost:8080/v1/chat/completions \
 	-H "Content-Type: application/json" \
 	-d '{"model":"Qwopus3.5-9B-coder-Exp-Q4_K_M", "messages":[{"role":"user","content":"Write hello world in Python"}]}'
+
+opencode:
+	bash ./generate_opencode_config.sh

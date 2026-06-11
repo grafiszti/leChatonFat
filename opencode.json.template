@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "llamacpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama.1",
+      "options": {
+        "baseURL": "http://localhost:8080/v1"
+      },
+      "models": {
+        "{{MODEL_NAME}}": {
+          "name": "{{MODEL_NAME_ALIAS}}"
+        }
+      }
+    }
+  },
+  "model": "llamacpp/{{MODEL_NAME}}",
+  "disabled_providers": [
+    "openai",
+    "anthropic",
+    "google",
+    "groq",
+    "openrouter"
+  ]
+}
