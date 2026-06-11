@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Environment variables are loaded from .env
+# Load .env file
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
 # Validate model file exists
 MODEL_PATH="/models/${MODEL_NAME}.gguf"
 if [ ! -f "$MODEL_PATH" ]; then
@@ -12,27 +18,27 @@ fi
 
 # Print startup configuration
 echo "Starting llama.cpp server..."
-echo "  Model:     $MODEL_NAME"
-echo "  Model path: $MODEL_PATH"
-echo "  Host:      $HOST"
-echo "  Port:      $PORT"
-echo "  Context:   $CTX_SIZE"
-echo "  Flash Attn: $FLASH_ATTN"
-echo "  Threads:   $THREADS"
+echo "  Model:     ${MODEL_NAME}"
+echo "  Model path: ${MODEL_PATH}"
+echo "  Host:      ${HOST}"
+echo "  Port:      ${PORT}"
+echo "  Context:   ${CTX_SIZE}"
+echo "  Flash Attn: ${FLASH_ATTN}"
+echo "  Threads:   ${THREADS}"
 echo ""
 
 # Run the server
 exec /app/llama-server \
-    -m "$MODEL_PATH" \
-    --host 0.0.0.0 \
-    --port 8080 \
-    --ctx-size 16384 \
-    --flash-attn on \
-    --batch-size 1024 \
-    --cache-type-k q4_0 \
-    --cache-type-v q4_0 \
-    --no-mmap \
-    --parallel 1 \
-    --cache-ram 0 \
-    --n-gpu-layers 999 \
-    --threads 12
+    -m "${MODEL_PATH}" \
+    --host "${HOST}" \
+    --port "${PORT}" \
+    --ctx-size "${CTX_SIZE}" \
+    --flash-attn "${FLASH_ATTN}" \
+    --batch-size "${BATCH_SIZE}" \
+    --cache-type-k "${CACHE_TYPE_K}" \
+    --cache-type-v "${CACHE_TYPE_V}" \
+    --no-mmap "${NO_MMAP}" \
+    --parallel "${PARALLEL}" \
+    --cache-ram "${CACHE_RAM}" \
+    --n-gpu-layers "${N_GPU_LAYERS}" \
+    --threads "${THREADS}"
