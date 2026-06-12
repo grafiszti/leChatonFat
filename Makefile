@@ -1,3 +1,8 @@
+# ---------------------------- venv management ----------------------------
+venv:
+	python3 -m venv venv
+
+# ---------------------------- Docker management ----------------------------
 up:
 	docker compose build
 	docker compose up -d
@@ -5,12 +10,11 @@ up:
 down:
 	docker compose down
 
+# ---------------------------- Deployment validation ----------------------------
 validate:
 	curl http://localhost:8080/health
 
-install_opencode:
-	curl -fsSL https://opencode.ai/install | bash
-
+# ---------------------------- Hardware validation ----------------------------
 check_gpu:
 	@echo "Checking GPU setup..."
 	@if command -v nvidia-smi > /dev/null 2>&1; then \
@@ -37,8 +41,6 @@ smoke_test:
 	-H "Content-Type: application/json" \
 	-d '{"model":"Qwopus3.5-9B-coder-Exp-Q4_K_M", "messages":[{"role":"user","content":"Write hello world in Python"}]}'
 
-opencode_config:
-	bash ./generate_opencode_config.sh
-
-env_config:
-	cp templates/.env.example .env
+# ---------------------------- Installing third-party tools ----------------------------
+install_opencode:
+	curl -fsSL https://opencode.ai/install | bash

@@ -37,7 +37,6 @@ exec /app/llama-server \
     --batch-size "${BATCH_SIZE}" \
     --cache-type-k "${CACHE_TYPE_K}" \
     --cache-type-v "${CACHE_TYPE_V}" \
-    --no-mmap "${NO_MMAP}" \
     --parallel "${PARALLEL}" \
     --cache-ram "${CACHE_RAM}" \
     --n-gpu-layers "${N_GPU_LAYERS}" \
