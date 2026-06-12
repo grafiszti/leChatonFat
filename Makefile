@@ -15,6 +15,18 @@ validate:
 	curl http://localhost:8080/health
 
 # ---------------------------- Hardware validation ----------------------------
+check_docker:
+	@if command -v docker > /dev/null 2>&1; then \
+		echo "✓ Docker is installed"; \
+	else \
+		echo "✗ Docker is NOT installed"; \
+	fi
+	@if command -v docker compose > /dev/null 2>&1; then \
+		echo "✓ Docker Compose is installed"; \
+	else \
+		echo "✗ Docker Compose is NOT installed"; \
+	fi
+
 check_gpu:
 	@echo "Checking GPU setup..."
 	@if command -v nvidia-smi > /dev/null 2>&1; then \
