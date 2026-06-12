@@ -16,6 +16,8 @@ if [ ! -f "$MODEL_PATH" ]; then
     exit 1
 fi
 
+JINJA_TEMPLATE_PATH="/app/${JINJA_TEMPLATE_FILE}"
+
 # Print startup configuration
 echo "Starting llama.cpp server..."
 echo "  Model:     ${MODEL_NAME}"
@@ -38,6 +40,8 @@ exec /app/llama-server \
     --cache-type-k "${CACHE_TYPE_K}" \
     --cache-type-v "${CACHE_TYPE_V}" \
     --parallel "${PARALLEL}" \
+    --jinja \
     --cache-ram "${CACHE_RAM}" \
     --n-gpu-layers "${N_GPU_LAYERS}" \
-    --threads "${THREADS}"
+    --threads "${THREADS}" \
+    --chat-template-file "${JINJA_TEMPLATE_PATH}"
