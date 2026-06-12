@@ -37,5 +37,8 @@ smoke_test:
 	-H "Content-Type: application/json" \
 	-d '{"model":"Qwopus3.5-9B-coder-Exp-Q4_K_M", "messages":[{"role":"user","content":"Write hello world in Python"}]}'
 
-opencode:
+opencode_config:
 	bash ./generate_opencode_config.sh
+
+env_config:
+	cp templates/.env.example .env

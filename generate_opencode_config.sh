@@ -19,6 +19,8 @@ fi
 # Replace the placeholders in the template
 sed "s/{{MODEL_NAME}}/$MODEL_NAME/g" \
     "s/{{MODEL_NAME_ALIAS}}/$MODEL_NAME_ALIAS/g" \
-    opencode.json.template > opencode.json
+    templates/opencode.json.template > opencode.json
 
-echo "Successfully generated opencode.json with MODEL_NAME: $MODEL_NAME and MODEL_NAME_ALIAS: $MODEL_NAME_ALIAS"
+echo "Successfully generated opencode.json with:"
+echo "- MODEL_NAME: $MODEL_NAME" 
+echo "- MODEL_NAME_ALIAS: $MODEL_NAME_ALIAS"
