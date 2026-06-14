@@ -9,14 +9,14 @@
         "baseURL": "http://localhost:8080/v1"
       },
       "models": {
-        "gemma-4-12b-it-Q3_K_M": {
-          "name": "gemma-4"
+        "Qwen3.6-35B-A3B-UD-Q3_K_M": {
+          "name": "qwen3.6"
         }
       }
     }
   },
 
-  "model": "llamacpp/gemma-4-12b-it-Q3_K_M",
+  "model": "llamacpp/Qwen3.6-35B-A3B-UD-Q3_K_M",
 
   "disabled_providers": [
     "openai",
