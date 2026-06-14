@@ -6,7 +6,7 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "llama.cpp",
       "options": {
-        "baseURL": "http://localhost:8080/v1"
+        "baseURL": "http://localhost:8000/v1"
       },
       "models": {
         "Qwen3.6-35B-A3B-UD-Q3_K_M": {

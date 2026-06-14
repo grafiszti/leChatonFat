@@ -12,7 +12,7 @@ down:
 
 # ---------------------------- Deployment validation ----------------------------
 validate:
-	curl http://localhost:8080/health
+	curl http://localhost:8000/health
 
 # ---------------------------- Hardware validation ----------------------------
 check_docker:
@@ -49,9 +49,12 @@ check_gpu:
 	fi
 
 smoke_test:
-	curl http://localhost:8080/v1/chat/completions \
+	@if [ ! -f .env ]; then echo "Error: .env file not found" >&2; exit 1; fi
+	@MODEL=$$(grep '^MODEL_NAME=' .env | head -1 | cut -d'=' -f2 | sed 's/^["'\''"]//;s/["'\''"]$$//'); \
+	echo "Using model: $$MODEL"; \
+	curl -s http://localhost:8000/v1/chat/completions \
 	-H "Content-Type: application/json" \
-	-d '{"model":"Qwopus3.5-9B-coder-Exp-Q4_K_M", "messages":[{"role":"user","content":"Write hello world in Python"}]}'
+	-d '{"model":"'"$$MODEL"'", "messages":[{"role":"user","content":"Write hello world in Python"}]}'
 
 # ---------------------------- Config generation ----------------------------
 generate_opencode_config:

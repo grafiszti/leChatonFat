@@ -109,11 +109,11 @@ If GPU acceleration isn't working:
    ```
 
 ### Port Already in Use
-If port 8080 is already in use, modify the port mapping in `docker-compose.yml`:
+If port 8000 is already in use, modify the port mapping in `docker-compose.yml`:
 
 ```yaml
 ports:
-  - "8081:8080"  # Change 8080 to your preferred port
+  - "8001:8080"  # Change 8000 to your preferred port
 ```
 
 ### Out of Memory
