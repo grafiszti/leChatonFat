@@ -10,7 +10,7 @@
       },
       "models": {
         "Qwen3.6-35B-A3B-UD-Q3_K_M": {
-          "name": "qwen3.6"
+          "name": "qwen3.6-35b"
         }
       }
     }
