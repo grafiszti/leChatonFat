@@ -53,6 +53,10 @@ smoke_test:
 	-H "Content-Type: application/json" \
 	-d '{"model":"Qwopus3.5-9B-coder-Exp-Q4_K_M", "messages":[{"role":"user","content":"Write hello world in Python"}]}'
 
+# ---------------------------- Config generation ----------------------------
+generate_opencode_config:
+	bash generate_opencode_config.sh
+
 # ---------------------------- Installing third-party tools ----------------------------
 install_opencode:
 	curl -fsSL https://opencode.ai/install | bash
