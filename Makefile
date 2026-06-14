@@ -57,6 +57,9 @@ smoke_test:
 generate_opencode_config:
 	bash generate_opencode_config.sh
 
+copy_env:
+	cp templates/.env.template .env
+
 # ---------------------------- Installing third-party tools ----------------------------
 install_opencode:
 	curl -fsSL https://opencode.ai/install | bash
