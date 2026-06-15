@@ -12,7 +12,7 @@ down:
 
 # ---------------------------- Deployment validation ----------------------------
 validate:
-	curl http://localhost:8000/health
+	curl http://localhost:8001/health
 
 # ---------------------------- Hardware validation ----------------------------
 check_docker:
@@ -52,7 +52,7 @@ smoke_test:
 	@if [ ! -f .env ]; then echo "Error: .env file not found" >&2; exit 1; fi
 	@MODEL=$$(grep '^MODEL_NAME=' .env | head -1 | cut -d'=' -f2 | sed 's/^["'\''"]//;s/["'\''"]$$//'); \
 	echo "Using model: $$MODEL"; \
-	curl -s http://localhost:8000/v1/chat/completions \
+	curl -s http://localhost:8001/v1/chat/completions \
 	-H "Content-Type: application/json" \
 	-d '{"model":"'"$$MODEL"'", "messages":[{"role":"user","content":"Write hello world in Python"}]}'
 

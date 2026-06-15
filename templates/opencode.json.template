@@ -6,7 +6,7 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "llama.cpp",
       "options": {
-        "baseURL": "http://localhost:8000/v1"
+        "baseURL": "http://localhost:8001/v1"
       },
       "models": {
         "{{MODEL_NAME}}": {
