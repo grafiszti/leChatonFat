@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - "8001:8080"
+      - "${PORT_EXTERNAL}:${PORT_INTERNAL}"
 
     volumes:
       - ./models:/models

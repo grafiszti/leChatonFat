@@ -68,10 +68,11 @@ Edit `templates/.env.template` (then copy to `.env`) to configure:
 | `REASONING` | `on`    | Enable reasoning mode (`--reasoning on`) |
 
 ### Server
-| Variable | Default   | Description  |
-|----------|-----------|--------------|
-| `HOST`   | `0.0.0.0` | Bind address |
-| `PORT`   | `8080`    | Server port  |
+| Variable           | Default   | Description                    |
+|--------------------|-----------|--------------------------------|
+| `HOST`             | `0.0.0.0` | Bind address                   |
+| `PORT_INTERNAL`    | `8080`    | Port inside Docker container   |
+| `PORT_EXTERNAL`    | `8001`    | Port exposed to host           |
 
 Adjust these in `.env` after copying from the template.
 
@@ -109,12 +110,13 @@ If GPU acceleration isn't working:
    ```
 
 ### Port Already in Use
-If port 8000 is already in use, modify the port mapping in `docker-compose.yml`:
+If the external port is already in use, modify `PORT_EXTERNAL` in `.env`:
 
-```yaml
-ports:
-  - "8001:8080"  # Change 8000 to your preferred port
+```bash
+PORT_EXTERNAL=8002
 ```
+
+The mapping in `docker-compose.yml` uses `${PORT_EXTERNAL}:${PORT_INTERNAL}` automatically.
 
 ### Out of Memory
 If you encounter OOM errors:

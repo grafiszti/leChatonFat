@@ -50,6 +50,7 @@ fi
 # ---------------------------------------------------------------------------
 MODEL_NAME=$(env_var "MODEL_NAME")
 MODEL_NAME_ALIAS=$(env_var "MODEL_NAME_ALIAS")
+PORT=$(env_var "PORT_EXTERNAL")
 
 if [ -z "$MODEL_NAME" ]; then
     echo "Error: MODEL_NAME not set in .env" >&2
@@ -61,13 +62,20 @@ if [ -z "$MODEL_NAME_ALIAS" ]; then
     exit 1
 fi
 
+if [ -z "$PORT" ]; then
+    echo "Error: PORT_EXTERNAL not set in .env" >&2
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # Generate opencode.json
 # ---------------------------------------------------------------------------
 sed -e "s/{{MODEL_NAME}}/${MODEL_NAME}/g" \
     -e "s/{{MODEL_NAME_ALIAS}}/${MODEL_NAME_ALIAS}/g" \
+    -e "s/{{PORT_EXTERNAL}}/${PORT}/g" \
     templates/opencode.json.template > opencode.json
 
 echo "Successfully generated opencode.json with:"
 echo "  MODEL_NAME:       $MODEL_NAME"
 echo "  MODEL_NAME_ALIAS: $MODEL_NAME_ALIAS"
+echo "  PORT:             $PORT"
