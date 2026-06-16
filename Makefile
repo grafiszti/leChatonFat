@@ -4,8 +4,20 @@ venv:
 
 # ---------------------------- Docker management ----------------------------
 up:
-	docker compose build
-	docker compose up -d
+	@if [ -f .env ]; then \
+		FORCE_CPU=$$(grep '^FORCE_CPU=' .env | head -1 | cut -d'=' -f2); \
+	else \
+		FORCE_CPU=off; \
+	fi; \
+	if [ "$$FORCE_CPU" = "on" ] || ! (command -v nvidia-smi > /dev/null 2>&1 && docker info 2>/dev/null | grep -q "nvidia"); then \
+		echo "CPU runtime"; \
+		docker compose -f docker-compose.yml build; \
+		docker compose -f docker-compose.yml up -d; \
+	else \
+		echo "GPU detected - using NVIDIA runtime"; \
+		docker compose -f docker-compose.yml -f docker-compose.override.yml build; \
+		docker compose -f docker-compose.yml -f docker-compose.override.yml up -d; \
+	fi
 
 down:
 	docker compose down

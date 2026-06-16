@@ -14,13 +14,5 @@ services:
     env_file:
       - .env
 
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
 volumes:
   llama_cache:
