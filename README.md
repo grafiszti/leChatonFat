@@ -1,4 +1,7 @@
-# llama coder
+# Le Chaton Fat
+
+![Le Chaton Fat](img.png)
+
 A Docker-based setup for running llama.cpp server with GPU acceleration, optimized for use as a
 local LLM provider for the Opencode coding assistant.
 
@@ -30,18 +33,21 @@ make validate
 ## Configuration
 
 ### Model
-Edit `templates/.env.template` (then copy to `.env`) to configure:
+Use `make copy_env` to create `.env` file with all settings to configure:
 
-| Variable       | Default                     | Description                                                |
-|----------------|-----------------------------|------------------------------------------------------------|
-| `MODEL_NAME`   | `Qwen3.6-35B-A3B-UD-Q3_K_M` | GGUF model filename (without `.gguf` extension)            |
-| `CTX_SIZE`     | `65536`                     | Context window size in tokens                              |
-| `N_GPU_LAYERS` | *(unset)*                   | Number of layers to offload to GPU (omit or `999` for all) |
-| `THREADS`      | `6`                         | CPU threads for inference                                  |
-| `FLASH_ATTN`   | `on`                        | Enable flash attention                                     |
-| `BATCH_SIZE`   | `1024`                      | Prompt processing batch size                               |
-| `CACHE_RAM`    | `4096`                      | KV cache memory budget in MiB                              |
-| `PARALLEL`     | `1`                         | Context parallelism                                        |
+| Variable           | Default                      | Description                                     |
+|--------------------|------------------------------|-------------------------------------------------|
+| `MODEL_NAME`       | `Qwen3.6-35B-A3B-UD-Q4_K_XL` | GGUF model filename (without `.gguf` extension) |
+| `MODEL_NAME_ALIAS` | `qwen3.6-35b`                | Alias for the model (used in opencode.json)     |
+| `CTX_SIZE`         | `65536`                      | Context window size in tokens                   |
+| `THREADS`          | `6`                          | CPU threads for inference                       |
+| `FLASH_ATTN`       | `on`                         | Enable flash attention                          |
+| `BATCH_SIZE`       | `1024`                       | Prompt processing batch size                    |
+| `CACHE_TYPE_K`     | `q4_0`                       | KV cache type for K tensor                      |
+| `CACHE_TYPE_V`     | `q4_0`                       | KV cache type for V tensor                      |
+| `NO_MMAP`          | `true`                       | Disable memory-mapped I/O for model loading     |
+| `PARALLEL`         | `1`                          | Context parallelism                             |
+| `CACHE_RAM`        | `4096`                       | KV cache memory budget in MiB                   |
 
 ### Speculative Decoding (Fit)
 | Variable      | Default | Description                           |
@@ -73,6 +79,7 @@ Edit `templates/.env.template` (then copy to `.env`) to configure:
 | `HOST`             | `0.0.0.0` | Bind address                   |
 | `PORT_INTERNAL`    | `8080`    | Port inside Docker container   |
 | `PORT_EXTERNAL`    | `8001`    | Port exposed to host           |
+| `FORCE_CPU`        | `off`     | Force CPU runtime (on/off)     |
 
 Adjust these in `.env` after copying from the template.
 
@@ -80,14 +87,16 @@ Adjust these in `.env` after copying from the template.
 
 | Command                         | Description                             |
 |---------------------------------|-----------------------------------------|
-| `make up`                       | Build and start the llama.cpp container |
+| `make up`                       | Build and start (auto-detects GPU/CPU)  |
 | `make down`                     | Stop and remove the container           |
 | `make validate`                 | Check if the server is healthy          |
 | `make install_opencode`         | Install Opencode CLI                    |
 | `make check_gpu`                | Verify GPU and NVIDIA runtime setup     |
+| `make check_docker`             | Verify Docker and Docker Compose        |
 | `make smoke_test`               | Run a sample chat completion request    |
 | `make generate_opencode_config` | Generate `opencode.json` from `.env`    |
 | `make copy_env`                 | Copy `.env.template` to `.env`          |
+| `make venv`                     | Create Python virtual environment       |
 
 ## Troubleshooting
 
@@ -116,13 +125,12 @@ If the external port is already in use, modify `PORT_EXTERNAL` in `.env`:
 PORT_EXTERNAL=8002
 ```
 
-The mapping in `docker-compose.yml` uses `${PORT_EXTERNAL}:${PORT_INTERNAL}` automatically.
-
 ### Out of Memory
 If you encounter OOM errors:
 - Use a smaller model
 - Reduce `THREADS` or `CTX_SIZE`
-- Lower `N_GPU_LAYERS` or remove it to offload fewer layers
+- Set `FORCE_CPU=on` to disable GPU offloading
+- Reduce `CACHE_RAM` or use a lower cache type (`q4_0` → `f16`)
 
 ## Data Persistence
 Model data is stored in `./models/` (bind-mounted), and KV cache is stored 
