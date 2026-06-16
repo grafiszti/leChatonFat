@@ -85,18 +85,19 @@ Adjust these in `.env` after copying from the template.
 
 ## Makefile Commands
 
-| Command                         | Description                             |
-|---------------------------------|-----------------------------------------|
-| `make up`                       | Build and start (auto-detects GPU/CPU)  |
-| `make down`                     | Stop and remove the container           |
-| `make validate`                 | Check if the server is healthy          |
-| `make install_opencode`         | Install Opencode CLI                    |
-| `make check_gpu`                | Verify GPU and NVIDIA runtime setup     |
-| `make check_docker`             | Verify Docker and Docker Compose        |
-| `make smoke_test`               | Run a sample chat completion request    |
-| `make generate_opencode_config` | Generate `opencode.json` from `.env`    |
-| `make copy_env`                 | Copy `.env.template` to `.env`          |
-| `make venv`                     | Create Python virtual environment       |
+| Command                         | Description                                    |
+|---------------------------------|------------------------------------------------|
+| `make up`                       | Build and start (auto-detects GPU/CPU)         |
+| `make down`                     | Stop and remove the container                  |
+| `make validate`                 | Check if the server is healthy                 |
+| `make install_opencode`         | Install Opencode CLI                           |
+| `make check_gpu`                | Verify GPU and NVIDIA runtime setup            |
+| `make check_docker`             | Verify Docker and Docker Compose               |
+| `make smoke_test`               | Run a sample chat completion request           |
+| `make generate_opencode_config` | Generate `opencode.json` from `.env`           |
+| `make copy_env`                 | Copy `.env.template` to `.env`                 |
+| `make download_qwen`            | Download the default Qwen model to `./models/` |
+| `make venv`                     | Create Python virtual environment              |
 
 ## Troubleshooting
 

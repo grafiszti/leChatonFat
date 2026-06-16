@@ -1,7 +1,3 @@
-# ---------------------------- venv management ----------------------------
-venv:
-	python3 -m venv venv
-
 # ---------------------------- Docker management ----------------------------
 up:
 	@if [ -f .env ]; then \
@@ -78,3 +74,19 @@ copy_env:
 # ---------------------------- Installing third-party tools ----------------------------
 install_opencode:
 	curl -fsSL https://opencode.ai/install | bash
+
+install_huggingface_cli:
+	curl -LsSf https://hf.co/cli/install.sh | bash
+
+# ---------------------------- Default model download ---------------------------------
+download_qwen:
+	@if [ ! -f .env ]; then echo "Error: .env not found. Run 'make copy_env' first." >&2; exit 1; fi
+	@MODEL=$$(grep '^MODEL_NAME=' .env | head -1 | cut -d'=' -f2 | sed 's/^["'\''"]//;s/["'\''"]$$//'); \
+	echo "Downloading $$MODEL..."; \
+	mkdir -p models; \
+	if [ -f "models/$$MODEL.gguf" ]; then \
+		echo "Model already exists at models/$$MODEL.gguf"; \
+	else \
+		hf download hf://unsloth/Qwen3.6-35B-A3B-GGUF/$$MODEL.gguf -o models; \
+		echo "Download complete: models/$$MODEL.gguf"; \
+	fi
