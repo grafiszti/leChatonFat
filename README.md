@@ -1,15 +1,14 @@
-# Le Chaton Fat
-
-![Le Chaton Fat](img.png)
+# llama.cpp Server for Opencode
 
 A Docker-based setup for running llama.cpp server with GPU acceleration, optimized for use as a
 local LLM provider for the Opencode coding assistant.
 
 ## Features
 - **GPU Acceleration**: Configured for NVIDIA GPUs with optimized settings
-- **Docker Compose**: Easy setup and management
-- **Speculative Decoding**: Fit-based speculative decoding for faster inference
+- **Docker Compose**: Easy setup and management with GPU auto-detection
+- **Speculative Decoding**: Fit-based speculative decoding and draft model configuration
 - **Configurable Inference**: Sampling parameters, penalties, reasoning mode, and more via `.env`
+- **Auto-generated Config**: Generate `opencode.json` from `.env` via script
 - **Simple Management**: Makefile commands for common tasks
 
 ## Prerequisites
@@ -58,6 +57,18 @@ Use `make copy_env` to create `.env` file with all settings to configure:
 | `UBATCH_SIZE` | `512`   | Unbatched (speculative) batch size    |
 | `POLL_BATCH`  | `0`     | Poll batch size                       |
 
+### Speculative Decoding (Draft Model)
+| Variable           | Default | Description                       |
+|--------------------|---------|-----------------------------------|
+| `SPEC_TYPE`        | -       | Draft model spec type             |
+| `SPEC_DRAFT_P_MIN` | -       | Minimum probability for draft     |
+| `SPEC_DRAFT_N_MAX` | -       | Maximum draft candidates          |
+
+### Context & GPU
+| Variable          | Default | Description                        |
+|-------------------|---------|------------------------------------|
+| `CTX_CHECKPOINTS` | -       | Context checkpoints path           |
+
 ### Sampling & Penalties
 | Variable           | Default | Description                   |
 |--------------------|---------|-------------------------------|
@@ -83,6 +94,10 @@ Use `make copy_env` to create `.env` file with all settings to configure:
 
 Adjust these in `.env` after copying from the template.
 
+### Auto-generated opencode.json
+
+Run `make generate_opencode_config` to generate `opencode.json` from `templates/opencode.json.template` using values from `.env`. This updates the provider URL, model name, and model alias automatically.
+
 ## Makefile Commands
 
 | Command                         | Description                                    |
@@ -97,7 +112,7 @@ Adjust these in `.env` after copying from the template.
 | `make generate_opencode_config` | Generate `opencode.json` from `.env`           |
 | `make copy_env`                 | Copy `.env.template` to `.env`                 |
 | `make download_qwen`            | Download the default Qwen model to `./models/` |
-| `make venv`                     | Create Python virtual environment              |
+| `make install_huggingface_cli`  | Install Hugging Face CLI                       |
 
 ## Troubleshooting
 
@@ -131,7 +146,7 @@ If you encounter OOM errors:
 - Use a smaller model
 - Reduce `THREADS` or `CTX_SIZE`
 - Set `FORCE_CPU=on` to disable GPU offloading
-- Reduce `CACHE_RAM` or use a lower cache type (`q4_0` → `f16`)
+- Reduce `CACHE_RAM` or use a higher cache type (`q4_0` → `f16`)
 
 ## Data Persistence
 Model data is stored in `./models/` (bind-mounted), and KV cache is stored 

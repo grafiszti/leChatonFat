@@ -90,11 +90,6 @@ if [[ "${REASONING}" == "on" ]]; then
     SERVER_CMD+=(--reasoning on)
 fi
 
-# GPU layers
-if [[ -n "${N_GPU_LAYERS}" ]]; then
-    SERVER_CMD+=(-ngl "${N_GPU_LAYERS}")
-fi
-
 # Print startup configuration
 echo "Starting llama.cpp server..."
 echo "  Model:      ${MODEL_NAME}"
