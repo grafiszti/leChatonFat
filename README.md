@@ -1,4 +1,4 @@
-# llama.cpp Server for Opencode
+# LeChatonFat - llama.cpp Server for Opencode
 
 ![img](img.png)
 
