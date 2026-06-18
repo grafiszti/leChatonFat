@@ -1,5 +1,7 @@
 # llama.cpp Server for Opencode
 
+![img](img.png)
+
 A Docker-based setup for running llama.cpp server with GPU acceleration, optimized for use as a
 local LLM provider for the Opencode coding assistant.
 
