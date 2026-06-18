@@ -52,17 +52,6 @@ if [[ -n "${POLL_BATCH}" ]]; then
     SERVER_CMD+=(--poll-batch "${POLL_BATCH}")
 fi
 
-# Speculative decoding (draft model)
-if [[ -n "${SPEC_TYPE}" ]]; then
-    SERVER_CMD+=(--spec-type "${SPEC_TYPE}")
-fi
-if [[ -n "${SPEC_DRAFT_P_MIN}" ]]; then
-    SERVER_CMD+=(--spec-draft-p-min "${SPEC_DRAFT_P_MIN}")
-fi
-if [[ -n "${SPEC_DRAFT_N_MAX}" ]]; then
-    SERVER_CMD+=(--spec-draft-n-max "${SPEC_DRAFT_N_MAX}")
-fi
-
 # Sampling parameters
 if [[ -n "${TEMP}" ]]; then
     SERVER_CMD+=(--temp "${TEMP}")

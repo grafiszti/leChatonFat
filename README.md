@@ -57,13 +57,6 @@ Use `make copy_env` to create `.env` file with all settings to configure:
 | `UBATCH_SIZE` | `512`   | Unbatched (speculative) batch size    |
 | `POLL_BATCH`  | `0`     | Poll batch size                       |
 
-### Speculative Decoding (Draft Model)
-| Variable           | Default | Description                       |
-|--------------------|---------|-----------------------------------|
-| `SPEC_TYPE`        | -       | Draft model spec type             |
-| `SPEC_DRAFT_P_MIN` | -       | Minimum probability for draft     |
-| `SPEC_DRAFT_N_MAX` | -       | Maximum draft candidates          |
-
 ### Context & GPU
 | Variable          | Default | Description                        |
 |-------------------|---------|------------------------------------|
@@ -149,5 +142,13 @@ If you encounter OOM errors:
 - Reduce `CACHE_RAM` or use a higher cache type (`q4_0` → `f16`)
 
 ## Data Persistence
-Model data is stored in `./models/` (bind-mounted), and KV cache is stored 
+Model data is stored in `./models/` (bind-mounted), and KV cache is stored
 in the `llama_cache` Docker volume, so both persist across container restarts.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Retro Crest Mateusz Choiński
+
+Note: Any tools, models, or third-party software used in this project are subject to their own respective licenses.
