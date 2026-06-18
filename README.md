@@ -6,7 +6,7 @@ local LLM provider for the Opencode coding assistant.
 ## Features
 - **GPU Acceleration**: Configured for NVIDIA GPUs with optimized settings
 - **Docker Compose**: Easy setup and management with GPU auto-detection
-- **Speculative Decoding**: Fit-based speculative decoding and draft model configuration
+- **Speculative Decoding**: Fit-based speculative decoding with configurable batch sizes
 - **Configurable Inference**: Sampling parameters, penalties, reasoning mode, and more via `.env`
 - **Auto-generated Config**: Generate `opencode.json` from `.env` via script
 - **Simple Management**: Makefile commands for common tasks
@@ -103,7 +103,7 @@ Run `make generate_opencode_config` to generate `opencode.json` from `templates/
 | `make check_docker`             | Verify Docker and Docker Compose               |
 | `make smoke_test`               | Run a sample chat completion request           |
 | `make generate_opencode_config` | Generate `opencode.json` from `.env`           |
-| `make copy_env`                 | Copy `.env.template` to `.env`                 |
+| `make copy_env`                 | Copy `templates/.env.template` to `.env`       |
 | `make download_qwen`            | Download the default Qwen model to `./models/` |
 | `make install_huggingface_cli`  | Install Hugging Face CLI                       |
 
