@@ -79,6 +79,11 @@ if [[ "${REASONING}" == "on" ]]; then
     SERVER_CMD+=(--reasoning on)
 fi
 
+# Jinja chat template
+if [[ -n "${CHAT_TEMPLATE}" && -f "${CHAT_TEMPLATE}" ]]; then
+    SERVER_CMD+=(--chat-template "$(cat "${CHAT_TEMPLATE}")")
+fi
+
 # Print startup configuration
 echo "Starting llama.cpp server..."
 echo "  Model:      ${MODEL_NAME}"

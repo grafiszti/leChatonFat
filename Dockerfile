@@ -5,6 +5,8 @@ FROM ghcr.io/ggml-org/llama.cpp:server-cuda
 COPY run.sh /app/run.sh
 RUN chmod +x /app/run.sh
 
+COPY templates/qwen_chat_template.jinja /app/qwen_chat_template.jinja
+
 # Set working directory so run.sh's model path validation works correctly
 WORKDIR /app
 

@@ -75,9 +75,10 @@ Use `make copy_env` to create `.env` file with all settings to configure:
 | `REPEAT_PENALTY`   | `1.0`   | Repetition penalty            |
 
 ### Features
-| Variable    | Default | Description                              |
-|-------------|---------|------------------------------------------|
-| `REASONING` | `on`    | Enable reasoning mode (`--reasoning on`) |
+| Variable          | Default                             | Description                              |
+|-------------------|-------------------------------------|------------------------------------------|
+| `REASONING`       | `on`                                | Enable reasoning mode (`--reasoning on`) |
+| `CHAT_TEMPLATE`   | `/app/qwen_chat_template.jinja`     | Path to Jinja chat template file         |
 
 ### Server
 | Variable           | Default   | Description                    |
