@@ -40,13 +40,12 @@ Use `make copy_env` to create `.env` file with all settings to configure:
 |--------------------|------------------------------|-------------------------------------------------|
 | `MODEL_NAME`       | `Qwen3.6-35B-A3B-UD-Q4_K_XL` | GGUF model filename (without `.gguf` extension) |
 | `MODEL_NAME_ALIAS` | `qwen3.6-35b`                | Alias for the model (used in opencode.json)     |
-| `CTX_SIZE`         | `65536`                      | Context window size in tokens                   |
-| `THREADS`          | `6`                          | CPU threads for inference                       |
+| `CTX_SIZE`         | `98304`                      | Context window size in tokens                   |
+| `THREADS`          | `5`                          | CPU threads for inference                       |
 | `FLASH_ATTN`       | `on`                         | Enable flash attention                          |
-| `BATCH_SIZE`       | `1024`                       | Prompt processing batch size                    |
+| `BATCH_SIZE`       | `256`                        | Prompt processing batch size                    |
 | `CACHE_TYPE_K`     | `q4_0`                       | KV cache type for K tensor                      |
 | `CACHE_TYPE_V`     | `q4_0`                       | KV cache type for V tensor                      |
-| `NO_MMAP`          | `true`                       | Disable memory-mapped I/O for model loading     |
 | `PARALLEL`         | `1`                          | Context parallelism                             |
 | `CACHE_RAM`        | `4096`                       | KV cache memory budget in MiB                   |
 
@@ -54,9 +53,9 @@ Use `make copy_env` to create `.env` file with all settings to configure:
 | Variable      | Default | Description                           |
 |---------------|---------|---------------------------------------|
 | `FIT`         | `on`    | Enable fit-based speculative decoding |
-| `FIT_TARGET`  | `768`   | Fit target sequence length            |
-| `FIT_CTX`     | `65536` | Fit context size                      |
-| `UBATCH_SIZE` | `512`   | Unbatched (speculative) batch size    |
+| `FIT_TARGET`  | `256`   | Fit target sequence length            |
+| `FIT_CTX`     | `98304` | Fit context size                      |
+| `UBATCH_SIZE` | `256`   | Unbatched (speculative) batch size    |
 | `POLL_BATCH`  | `0`     | Poll batch size                       |
 
 ### Context & GPU
