@@ -28,7 +28,6 @@ models/*.gguf
 
 # Docker
 *.log
-docker-compose.override.yml
 
 # Project specific
 *.pyc
