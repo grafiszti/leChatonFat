@@ -1,13 +1,9 @@
 # ---------------------------- Docker management ----------------------------
 up:
-	@docker image inspect lechatonfat-mcp-browser > /dev/null 2>&1 || { \
-		echo "MCP browser image not found — building..."; \
-		docker build -t lechatonfat-mcp-browser mcps/browser; \
-	}
-	@docker image inspect lechatonfat-searxng-mcp > /dev/null 2>&1 || { \
-		echo "MCP SearXNG image not found — building..."; \
-		docker build --network=host -t lechatonfat-searxng-mcp mcps/searxng; \
-	}
+	# Always rebuild MCP images (docker layer cache makes this cheap when
+	# nothing changed); guards only on existence kept stale images around.
+	@docker build -t lechatonfat-mcp-browser mcps/browser
+	@docker build --network=host -t lechatonfat-searxng-mcp mcps/searxng
 	@if [ -f .env ]; then \
 		FORCE_CPU=$$(grep '^FORCE_CPU=' .env | head -1 | cut -d'=' -f2); \
 	else \
@@ -82,6 +78,11 @@ build-searxng-mcp:
 	docker build --network=host -t lechatonfat-searxng-mcp mcps/searxng
 
 build-mcp: build-mcp-browser build-searxng-mcp
+
+# Force a clean rebuild of both MCP images (no cache, in case sources changed)
+rebuild-mcp:
+	docker rmi -f lechatonfat-mcp-browser lechatonfat-searxng-mcp 2>/dev/null || true
+	$(MAKE) build-mcp
 
 # ---------------------------- Config generation ----------------------------
 generate_opencode_config:
