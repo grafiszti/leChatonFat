@@ -17,7 +17,7 @@ all state; the MCP adapter is a stateless HTTP proxy.
     │
     ▼
  mcps/rag  (Node MCP, spawned per-call, stateless)        [new]
-    │  HTTP :8002
+     │  HTTP :8083 (internal — MCP reaches rag via compose network)
     ▼
  rag  (FastAPI, always-on)                                [new]
     │  ├─ ingest: URL scrape / PDF / DOCX → parse → chunk
@@ -44,7 +44,8 @@ started in `--embeddings` mode instead of chat mode.
   **Verify at implementation**: exact `llama-server` embedding flags for this release,
   and whether Qwen3-Embedding needs query/passage task prefixes (asymmetric model).
 - Exposes OpenAI-compatible `POST /v1/embeddings`.
-- Ports: internal `8082`, not exposed to host (internal network only).
+- Ports: internal `8084`, not exposed to host. (Deliberately numbered away from `8082`
+  to avoid confusion with the rag host port `8002` — see `.env` section.)
 - Model GGUF goes in `./models/` (shared bind mount) — reuse `make download_*` pattern.
   **Verify at implementation**: correct HF repo / GGUF filename.
 
@@ -52,7 +53,8 @@ started in `--embeddings` mode instead of chat mode.
 
 - Image: `qdrant/qdrant` (pin version).
 - Named volume `qdrant_data:/qdrant/storage` for persistence.
-- Ports: internal `6333`; expose `6333` to host **only** for the admin UI (optional).
+- Ports: internal `6333`. Host exposure optional — bind `127.0.0.1:${QDRANT_PORT}:6333`
+  for the admin UI and diagnostics; omit if not needed.
 - Collection `knowledge`:
   - `vectors.size = 1024` (must match embedding model dim; 512 if MRL-truncated)
   - `distance = Cosine`
@@ -70,8 +72,9 @@ Endpoints:
 |--------|------------------------|-------------------------------------|----------------------------------------|
 | GET    | `/health`              | —                                   | Liveness / readiness                   |
 | POST   | `/ingest/url`          | `{ "url", "max_chars"?, "depth"? }` | Scrape page → ingest                   |
-| POST   | `/ingest/file`         | multipart `file`                    | PDF/DOCX/MD/TXT upload → ingest        |
-| GET    | `/search`              | `?q=&top_k=&min_score=`             | Semantic top-k over chunks             |
+| POST   | `/ingest/file`         | multipart `file`                    | PDF/DOCX/MD/TXT upload → ingest |
+| POST   | `/ingest/text`         | `{ "text", "title"? }`              | Raw text → ingest               |
+| GET    | `/search`              | `?q=&top_k=&min_score=`             | Semantic top-k over chunks      |
 | GET    | `/sources`             | —                                   | List ingested sources                  |
 | DELETE | `/sources/{id}`        | —                                   | Remove source + chunks                 |
 | GET    | `/`                    | —                                   | Serve the web UI (FileResponse)        |
@@ -79,19 +82,30 @@ Endpoints:
 
 Data flow:
 
-- **Ingest**: fetch/parse → extract text → save raw to `/docs/{id}.txt` (+ original ext) →
-  chunk → embed chunks (batched) → upsert points into qdrant with payload
-  `{ source_id, title, url, chunk_index, doc_type }`.
+- **Ingest**: fetch/parse → extract text → save parsed text to `/docs/{id}.txt`, plus the
+  original upload as `/docs/{id}.{orig_ext}` when one exists (a `.txt` parse may be the
+  only file for URLs/text) → chunk → embed chunks (batched) → upsert points into qdrant
+  with payload `{ source_id, title, url?, filename?, chunk_index, doc_type }`.
 - **Search**: embed query → qdrant `query()` with `top_k` and optional `score_threshold` →
-  return `{ source, title, url, chunk_index, score, text }`.
+  return `{ source_id, title, url?, filename?, chunk_index, score, text }`.
 
 Chunking strategy:
 - Paragraph-based (`split_paragraphs`) with greedy merge to ~800 tokens (~600 words)
   and ~100-token overlap. Explicit `\n\n` boundaries preferred; hard cap by sentence if
   a paragraph overflows. Keep `chunk_index` for re-assembly.
-- Chunk boundaries derived once, cached per source (so re-ingest/delete is consistent).
+- Chunk boundaries computed once per ingest and persisted as `/docs/{id}.chunks.json`
+  alongside the raw text (survives service restarts).
 
-Sources are de-duplicated by URL hash; re-ingesting the same URL replaces its chunks.
+- `source_id` is the SHA‑256 hex hash of the URL (for `/ingest/url`) or of the file
+  content (for `/ingest/file`). `/ingest/text` uses the SHA‑256 of the text itself.
+- URL sources are de-duplicated by that hash; file sources by content hash, so re-uploading
+  the same bytes replaces chunks. Re-ingesting an existing `source_id` replaces its points,
+  raw files, and chunk cache.
+- `/ingest/url` params: `depth` is crawl depth — `0` (default) ingests only the given page;
+  `≥1` follows same-origin links, each page becoming its own source (dedup still applies).
+  `max_chars` caps the extracted text (character count, default none) before chunking.
+- `GET /sources` returns `[{ id, title, url?, filename?, doc_type, chunk_count,
+  ingested_at }]`.
 
 ### 4. `mcps/rag` — MCP adapter
 
@@ -104,7 +118,7 @@ Tools exposed to Opencode:
 |----------------------|---------------------------------|--------------------------------------|
 | `knowledge_search`   | `query`, `top_k?`, `min_score?` | `GET /search`                        |
 | `knowledge_add_url`  | `url`                           | `POST /ingest/url`                   |
-| `knowledge_add_text` | `text`, `title?`                | inline `POST /ingest/url`-style path |
+| `knowledge_add_text` | `text`, `title?`                | `POST /ingest/text`                  |
 
 Notes:
 - Local file ingestion (PDF/DOCX on the host) goes through the **Makefile** target, not
@@ -117,6 +131,9 @@ Served directly by the `rag` FastAPI service via `StaticFiles` mount — no extr
 containers. Single self-contained `rag/static/index.html` (inline CSS + vanilla JS,
 no build step, no frameworks).
 
+The `rag` Dockerfile must copy the static assets: `COPY static /app/static`. The app
+mounts the directory at `/` via `StaticFiles(html=True, directory="/app/static")`.
+
 New API endpoints (added to the table in section 3):
 
 | Method | Path                   | Body | Purpose                                |
@@ -128,8 +145,8 @@ UI layout (single page):
 
 - **Top bar**: search box → calls `GET /search`, shows results inline with score,
   chunk text, and source title.
-- **Source table**: title, URL, doc type, chunk count, ingested_at. Auto-refreshes
-  after ingest/delete actions.
+- **Source table**: title, URL (or filename for file uploads), doc type, chunk count,
+  ingested_at. Auto-refreshes after ingest/delete actions.
   - Each row has a delete button (trash icon) → `DELETE /sources/{id}` with
     confirmation dialog.
   - Click a row → expand inline to show chunks via `GET /sources/{id}/chunks`.
@@ -145,19 +162,24 @@ Add three services:
 
 ```yaml
   embeddings:
-    build: ./embeddings            # or reuse llama image + env flag
+    build: ./embeddings            # dedicated llama.cpp --embeddings instance
     container_name: llama-embeddings
     restart: unless-stopped
+    env_file: [.env]               # EMBEDDING_* vars → llama-server flags via run.sh
     volumes: ["./models:/models"]
-    environment: [embedding flags from .env]
-    healthcheck: curl /health
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   qdrant:
     image: qdrant/qdrant:<pinned>
     container_name: qdrant
     restart: unless-stopped
     volumes: ["qdrant_data:/qdrant/storage"]
-    ports: ["127.0.0.1:6333:6333"]
+    ports: ["127.0.0.1:${QDRANT_PORT}:6333"]
 
   rag:
     build: ./rag
@@ -168,7 +190,7 @@ Add three services:
       - "./rag_data:/docs"           # raw parsed documents
     env_file: [.env]
     environment:
-      - EMBEDDINGS_URL=http://embeddings:8082/v1/embeddings
+      - EMBEDDINGS_URL=http://embeddings:8084/v1/embeddings
       - QDRANT_URL=http://qdrant:6333
     ports: ["${RAG_PORT_EXTERNAL}:${RAG_PORT_INTERNAL}"]
     # Web UI served at http://localhost:${RAG_PORT_EXTERNAL}
@@ -223,12 +245,12 @@ Append to `mcp`:
 |-------------------------|-------------------------------------------------|
 | `build-mcp-rag`         | Build `lechatonfat-mcp-rag` image               |
 | `build-mcp`             | Extend to include rag                           |
-| `rag-ingest-file`       | `curl -F file=@... :8002/ingest/file`           |
-| `rag-ingest-url`        | `curl -d '{"url": ...}' :8002/ingest/url`       |
-| `rag-search`            | `curl ':8002/search?q=...'`                     |
-| `rag-sources`           | `curl :8002/sources`                            |
+| `rag-ingest-file`       | `curl -F file=@... localhost:$(RAG_PORT_EXTERNAL)/ingest/file` |
+| `rag-ingest-url`        | `curl -d '{"url": ...}' localhost:$(RAG_PORT_EXTERNAL)/ingest/url` |
+| `rag-search`            | `curl 'localhost:$(RAG_PORT_EXTERNAL)/search?q=...'` |
+| `rag-sources`           | `curl localhost:$(RAG_PORT_EXTERNAL)/sources` |
 | `download_embeddings`   | `hf download` of `EMBEDDING_MODEL` into `models/` |
-| `rag-ui`                | Open `http://localhost:${RAG_PORT_EXTERNAL}` in default browser |
+| `rag-ui`                | Open `http://localhost:$(RAG_PORT_EXTERNAL)` in default browser |
 
 `make up` should build/start the new services; add image pre-build checks like the
 existing MCP ones.
@@ -242,8 +264,8 @@ existing MCP ones.
    deps in `rag/requirements.txt`.
 3. **Parsers & chunking** — URL (httpx + BeautifulSoup), PDF (`pypdf`), DOCX
    (`mammoth`), TXT/MD; chunker + unit checks on a sample doc.
-4. **Ingestion** — `/ingest/url`, `/ingest/file`; raw doc storage; chunk → embed →
-   qdrant upsert; de-dup by URL; `DELETE /sources/{id}`.
+4. **Ingestion** — `/ingest/url`, `/ingest/file`, `/ingest/text`; raw doc storage; chunk → embed →
+   qdrant upsert; de-dup by content hash; `DELETE /sources/{id}`.
 5. **Search** — `/search` with `top_k`, `min_score`; verify result quality on 2–3 docs.
 6. **MCP adapter** — `mcps/rag/server.mjs` + `package.json` + `Dockerfile`; wire tools;
    build image; add to `opencode.json.template`.
