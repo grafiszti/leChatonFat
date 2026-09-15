@@ -66,14 +66,16 @@ Python image (`python:3.12-slim`), deps:
 
 Endpoints:
 
-| Method | Path                  | Body                                | Purpose                         |
-|--------|-----------------------|-------------------------------------|---------------------------------|
-| GET    | `/health`             | —                                   | Liveness / readiness            |
-| POST   | `/ingest/url`         | `{ "url", "max_chars"?, "depth"? }` | Scrape page → ingest            |
-| POST   | `/ingest/file`        | multipart `file`                    | PDF/DOCX/MD/TXT upload → ingest |
-| GET    | `/search`             | `?q=&top_k=&min_score=`             | Semantic top-k over chunks      |
-| GET    | `/sources`            | —                                   | List ingested sources           |
-| DELETE | `/sources/{id}`       | —                                   | Remove source + chunks          |
+| Method | Path                   | Body                                | Purpose                                |
+|--------|------------------------|-------------------------------------|----------------------------------------|
+| GET    | `/health`              | —                                   | Liveness / readiness                   |
+| POST   | `/ingest/url`          | `{ "url", "max_chars"?, "depth"? }` | Scrape page → ingest                   |
+| POST   | `/ingest/file`         | multipart `file`                    | PDF/DOCX/MD/TXT upload → ingest        |
+| GET    | `/search`              | `?q=&top_k=&min_score=`             | Semantic top-k over chunks             |
+| GET    | `/sources`             | —                                   | List ingested sources                  |
+| DELETE | `/sources/{id}`        | —                                   | Remove source + chunks                 |
+| GET    | `/`                    | —                                   | Serve the web UI (FileResponse)        |
+| GET    | `/sources/{id}/chunks` | —                                   | List chunks for a source (text, index) |
 
 Data flow:
 
@@ -98,16 +100,44 @@ Stateless proxy → `rag` service over HTTP.
 
 Tools exposed to Opencode:
 
-| Tool                     | Args                              | Maps to                    |
-|--------------------------|-----------------------------------|----------------------------|
-| `knowledge_search`       | `query`, `top_k?`, `min_score?`   | `GET /search`              |
-| `knowledge_add_url`      | `url`                             | `POST /ingest/url`         |
-| `knowledge_add_text`     | `text`, `title?`                  | inline `POST /ingest/url`-style path |
+| Tool                 | Args                            | Maps to                              |
+|----------------------|---------------------------------|--------------------------------------|
+| `knowledge_search`   | `query`, `top_k?`, `min_score?` | `GET /search`                        |
+| `knowledge_add_url`  | `url`                           | `POST /ingest/url`                   |
+| `knowledge_add_text` | `text`, `title?`                | inline `POST /ingest/url`-style path |
 
 Notes:
 - Local file ingestion (PDF/DOCX on the host) goes through the **Makefile** target, not
   the MCP — stdio/docker-run MCP can't easily receive binary uploads.
 - Dockerfile: `node:22-alpine`, `ENTRYPOINT ["node", "server.mjs"]`.
+
+### 5. Web UI — source management & search preview
+
+Served directly by the `rag` FastAPI service via `StaticFiles` mount — no extra
+containers. Single self-contained `rag/static/index.html` (inline CSS + vanilla JS,
+no build step, no frameworks).
+
+New API endpoints (added to the table in section 3):
+
+| Method | Path                   | Body | Purpose                                |
+|--------|------------------------|------|----------------------------------------|
+| GET    | `/`                    | —    | Serve the web UI (FileResponse)        |
+| GET    | `/sources/{id}/chunks` | —    | List chunks for a source (text, index) |
+
+UI layout (single page):
+
+- **Top bar**: search box → calls `GET /search`, shows results inline with score,
+  chunk text, and source title.
+- **Source table**: title, URL, doc type, chunk count, ingested_at. Auto-refreshes
+  after ingest/delete actions.
+  - Each row has a delete button (trash icon) → `DELETE /sources/{id}` with
+    confirmation dialog.
+  - Click a row → expand inline to show chunks via `GET /sources/{id}/chunks`.
+- **Ingest panel** (bottom or sidebar):
+  - URL input + "Ingest" button → `POST /ingest/url`.
+  - File input (accepts PDF/DOCX/TXT/MD) + "Upload" button → `POST /ingest/file`.
+
+The page is purely cosmetic sugar over the existing API — no new business logic.
 
 ## Docker Compose changes (`docker-compose.yml`)
 
@@ -141,6 +171,7 @@ Add three services:
       - EMBEDDINGS_URL=http://embeddings:8082/v1/embeddings
       - QDRANT_URL=http://qdrant:6333
     ports: ["${RAG_PORT_EXTERNAL}:${RAG_PORT_INTERNAL}"]
+    # Web UI served at http://localhost:${RAG_PORT_EXTERNAL}
     healthcheck: curl /health
 
 volumes:
@@ -197,6 +228,7 @@ Append to `mcp`:
 | `rag-search`            | `curl ':8002/search?q=...'`                     |
 | `rag-sources`           | `curl :8002/sources`                            |
 | `download_embeddings`   | `hf download` of `EMBEDDING_MODEL` into `models/` |
+| `rag-ui`                | Open `http://localhost:${RAG_PORT_EXTERNAL}` in default browser |
 
 `make up` should build/start the new services; add image pre-build checks like the
 existing MCP ones.
@@ -217,7 +249,8 @@ existing MCP ones.
    build image; add to `opencode.json.template`.
 7. **Makefile & validation** — new targets; extend `make up`; smoke tests:
    `make rag-ingest-url`, `make rag-search`, and an Opencode session asking a question
-   answerable only from the KB.
+   answerable only from the KB. Smoke test the web UI: open
+   `http://localhost:${RAG_PORT_EXTERNAL}`, list sources, ingest a URL, search, delete.
 8. **Docs** — update `README.md`; document ingest workflow (URL via MCP tool, files via
    `make rag-ingest-file`).
 
