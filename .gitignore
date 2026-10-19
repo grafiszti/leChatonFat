@@ -15,6 +15,9 @@ env/
 # models
 models/*.gguf
 
+# RAG runtime data
+rag_data/
+
 # IDEs
 .idea/
 .vscode/

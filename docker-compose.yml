@@ -38,6 +38,58 @@ services:
     volumes:
       - searxng_data:/etc/searxng
 
+  embeddings:
+    build: ./embeddings            # dedicated llama.cpp --embeddings instance
+    container_name: llama-embeddings
+    restart: unless-stopped
+    env_file: [.env]               # EMBEDDING_* vars via run.sh
+    volumes: ["./models:/models"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.4
+    container_name: qdrant
+    restart: unless-stopped
+    volumes: ["qdrant_data:/qdrant/storage"]
+    ports: ["127.0.0.1:${QDRANT_PORT}:6333"]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333 && printf 'GET /livez HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  rag:
+    build: ./rag
+    container_name: rag
+    restart: unless-stopped
+    depends_on:
+      embeddings:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - "./rag_data:/docs"           # raw parsed documents
+    env_file: [.env]
+    environment:
+      - EMBEDDINGS_URL=http://embeddings:8084/v1/embeddings
+      - QDRANT_URL=http://qdrant:6333
+    ports: ["${RAG_PORT_EXTERNAL}:${RAG_PORT_INTERNAL}"]
+    # Web UI served at http://localhost:${RAG_PORT_EXTERNAL}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${RAG_PORT_INTERNAL}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 volumes:
   llama_cache:
   searxng_data:
+  qdrant_data:
+  rag_data:

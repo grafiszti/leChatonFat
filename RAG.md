@@ -38,16 +38,23 @@ started in `--embeddings` mode instead of chat mode.
 
 - Image: same base; new small Dockerfile (or env-gated entrypoint — prefer a dedicated
   Dockerfile for clarity).
-- Model (default): `Qwen3-Embedding-0.6B-GGUF` (Q4_K_M), 1024-dim, Matryoshka/MRL
+- Model (default): `Qwen3-Embedding-0.6B-Q8_0` from `Qwen/Qwen3-Embedding-0.6B-GGUF`
+  (official repo — ships `Q8_0` / `f16` only), 1024-dim, Matryoshka/MRL
   capable. ~0.6B params → tiny VRAM footprint alongside the main model.
-- Runtime flags: `--embeddings`, `--pooling mean`, `--ctx-size 8192`, low `--threads`.
-  **Verify at implementation**: exact `llama-server` embedding flags for this release,
-  and whether Qwen3-Embedding needs query/passage task prefixes (asymmetric model).
+- Runtime flags: `--embeddings`, `--ctx-size 8192`, low `--threads`. Pooling is left to the
+  model default — **verified**: Qwen3-Embedding-0.6B GGUF ships default pooling `[3]`
+  (last-token), which is the correct mode for this model; the previous `--pooling mean`
+  override was removed (it produced a mismatch warning on startup).
 - Exposes OpenAI-compatible `POST /v1/embeddings`.
 - Ports: internal `8084`, not exposed to host. (Deliberately numbered away from `8082`
   to avoid confusion with the rag host port `8002` — see `.env` section.)
 - Model GGUF goes in `./models/` (shared bind mount) — reuse `make download_*` pattern.
-  **Verify at implementation**: correct HF repo / GGUF filename.
+  **Verified**: repo `Qwen/Qwen3-Embedding-0.6B-GGUF` file `Qwen3-Embedding-0.6B-Q8_0.gguf`,
+  1024-dim (confirmed via live `/v1/embeddings` response).
+- GPU: same CUDA image and the same nvidia runtime reservation as the main `llama` service
+  (via `docker-compose.override.yml`). Without it the container silently runs on CPU and
+  embedding batches take ~40s instead of <1s.**Verified**: with the reservation, an 8×600-word
+  batch embeds in ~0.6s on an RTX 2070 Super.
 
 ### 2. `qdrant` — vector database
 
@@ -100,12 +107,16 @@ Chunking strategy:
   content (for `/ingest/file`). `/ingest/text` uses the SHA‑256 of the text itself.
 - URL sources are de-duplicated by that hash; file sources by content hash, so re-uploading
   the same bytes replaces chunks. Re-ingesting an existing `source_id` replaces its points,
-  raw files, and chunk cache.
+  raw files, and chunk cache (points are deleted by source first, then re-upserted).
 - `/ingest/url` params: `depth` is crawl depth — `0` (default) ingests only the given page;
-  `≥1` follows same-origin links, each page becoming its own source (dedup still applies).
-  `max_chars` caps the extracted text (character count, default none) before chunking.
+  `≥1` follows same-origin links (BFS, capped at `RAG_MAX_CRAWL_PAGES`), each page becoming
+  its own source (dedup still applies). Slow/unreachable pages are skipped. `max_chars` caps
+  the extracted text (character count, default none) before chunking.
+- `/ingest/url` returns a single source object for depth 0, or `{ "sources": [...] }` when
+  a crawl ingested multiple pages.
 - `GET /sources` returns `[{ id, title, url?, filename?, doc_type, chunk_count,
-  ingested_at }]`.
+  ingested_at }]`, read from the per-source chunk cache (`{id}.chunks.json` now stores
+  `{ meta, chunks: [{index, text}] }`), so it survives service restarts and qdrant wipes.
 
 ### 4. `mcps/rag` — MCP adapter
 
@@ -208,17 +219,21 @@ volumes:
 
 ```
 # Embeddings
-EMBEDDING_MODEL=Qwen3-Embedding-0.6B-GGUF          # .gguf filename (no ext)
+EMBEDDING_MODEL=Qwen3-Embedding-0.6B-Q8_0          # .gguf filename (no ext)
+EMBEDDING_HF_REPO=Qwen/Qwen3-Embedding-0.6B-GGUF
 EMBEDDING_CTX=8192
 EMBEDDING_THREADS=4
+EMBEDDING_BATCH_SIZE=8192
 EMBEDDING_DIM=1024
 
 # RAG service
 RAG_PORT_INTERNAL=8083
 RAG_PORT_EXTERNAL=8002
-RAG_EMBED_BATCH=32          # chunks per embedding request
+RAG_EMBED_BATCH=8           # chunks per embedding request (stay under ctx=8192)
 RAG_CHUNK_WORDS=600         # target chunk size
 RAG_CHUNK_OVERLAP=100
+RAG_MAX_CRAWL_PAGES=10      # pages crawled when /ingest/url depth >= 1
+RAG_FETCH_TIMEOUT=30        # per-URL fetch timeout (seconds)
 
 # Qdrant (host access optional)
 QDRANT_PORT=6333
@@ -278,9 +293,18 @@ existing MCP ones.
 
 ## Open items to verify at implementation time
 
-- Exact `llama-server` embedding flags (`--embeddings`, `--pooling`) for the pinned
-  image version.
-- Qwen3-Embedding query/passage prefix handling in llama.cpp (asymmetric model).
-- HF repo + GGUF filename for the embedding model; confirm `EMBEDDING_DIM` matches.
-- Qdrant client + server version pairing; collection creation params.
-- Port collisions with existing services (llama `8001`, searxng `8081`).
+- ~~Exact `llama-server` embedding flags (`--embeddings`, `--pooling`) for the pinned
+  image version.~~ **Done.** `--embeddings` works; pooling left at model default (`[3]`/last).
+- ~~Qwen3-Embedding query/passage prefix handling in llama.cpp (asymmetric model).~~
+  **Check.** Server accepts plain prompts; no explicit prefix applied at ingest/search time.
+  If result quality is poor, prepend the Qwen3 task prefixes before embedding. Current
+  search quality on the Python tutorial sample is good (top hits match the topic).
+- ~~HF repo + GGUF filename for the embedding model; confirm `EMBEDDING_DIM` matches.~~
+  **Done.** `Qwen/Qwen3-Embedding-0.6B-GGUF` / `Qwen3-Embedding-0.6B-Q8_0.gguf`, 1024-dim.
+- ~~Qdrant client + server version pairing; collection creation params.~~
+  **Done.** `qdrant/qdrant:v1.13.4` + `qdrant-client==1.11.0`; collection `knowledge`
+  (1024, Cosine) created on first startup by `ensure_collection`. Re-ingest deletes
+  by source_id filter before upsert (replace semantics verified).
+- ~~Port collisions with existing services (llama `8001`, searxng `8081`).~~
+  **Done.** RAG host `8002`; qdrant host `6333` bound to 127.0.0.1; embeddings internal
+  only `8084`. No collisions with llama `8001`/searxng `8081`.

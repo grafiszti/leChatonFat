@@ -1,0 +1,8 @@
+{
+  "name": "rag-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0"
+  }
+}

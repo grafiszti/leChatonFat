@@ -4,6 +4,7 @@ up:
 	# nothing changed); guards only on existence kept stale images around.
 	@docker build -t lechatonfat-mcp-browser mcps/browser
 	@docker build --network=host -t lechatonfat-searxng-mcp mcps/searxng
+	@docker build --network=host -t lechatonfat-mcp-rag mcps/rag
 	@if [ -f .env ]; then \
 		FORCE_CPU=$$(grep '^FORCE_CPU=' .env | head -1 | cut -d'=' -f2); \
 	else \
@@ -77,12 +78,38 @@ build-mcp-browser:
 build-searxng-mcp:
 	docker build --network=host -t lechatonfat-searxng-mcp mcps/searxng
 
-build-mcp: build-mcp-browser build-searxng-mcp
+build-mcp-rag:
+	docker build --network=host -t lechatonfat-mcp-rag mcps/rag
+
+build-mcp: build-mcp-browser build-searxng-mcp build-mcp-rag
 
 # Force a clean rebuild of both MCP images (no cache, in case sources changed)
 rebuild-mcp:
-	docker rmi -f lechatonfat-mcp-browser lechatonfat-searxng-mcp 2>/dev/null || true
+	docker rmi -f lechatonfat-mcp-browser lechatonfat-searxng-mcp lechatonfat-mcp-rag 2>/dev/null || true
 	$(MAKE) build-mcp
+
+# ---------------------------- RAG --------------------------------------------
+RAG_PORT := $(shell grep '^RAG_PORT_EXTERNAL=' .env 2>/dev/null | head -1 | cut -d'=' -f2)
+RAG_PORT := $(if $(RAG_PORT),$(RAG_PORT),8002)
+RAG_BASE := http://localhost:$(RAG_PORT)
+
+rag-ingest-url:
+	@if [ -z "$(URL)" ]; then echo "Usage: make rag-ingest-url URL=https://example.com"; exit 1; fi
+	curl -s -X POST "$(RAG_BASE)/ingest/url" -H "Content-Type: application/json" -d '{"url":"$(URL)"}'
+
+rag-ingest-file:
+	@if [ -z "$(FILE)" ]; then echo "Usage: make rag-ingest-file FILE=/path/to/doc.pdf"; exit 1; fi
+	curl -s -X POST "$(RAG_BASE)/ingest/file" -F "file=@$(FILE)"
+
+rag-search:
+	@if [ -z "$(QUERY)" ]; then echo "Usage: make rag-search QUERY='your query'"; exit 1; fi
+	curl -s "$(RAG_BASE)/search?q=$(QUERY)"
+
+rag-sources:
+	curl -s "$(RAG_BASE)/sources"
+
+rag-ui:
+	@command -v xdg-open > /dev/null 2>&1 && xdg-open "$(RAG_BASE)" || echo "Open $(RAG_BASE) in your browser"
 
 # ---------------------------- Config generation ----------------------------
 generate_opencode_config:
@@ -98,6 +125,20 @@ install_opencode:
 install_huggingface_cli:
 	curl -LsSf https://hf.co/cli/install.sh | bash
 
+# ---------------------------- Embedding model download -------------------------
+download_embeddings:
+	@if [ ! -f .env ]; then echo "Error: .env not found. Run 'make copy_env' first." >&2; exit 1; fi
+	@MODEL=$$(grep '^EMBEDDING_MODEL=' .env | head -1 | cut -d'=' -f2 | sed 's/^["'\''"]//;s/["'\''"]$$//'); \
+	REPO=$$(grep '^EMBEDDING_HF_REPO=' .env | head -1 | cut -d'=' -f2 | sed 's/^["'\''"]//;s/["'\''"]$$//'); \
+	echo "Downloading $$MODEL from $$REPO..."; \
+	mkdir -p models; \
+	if [ -f "models/$$MODEL.gguf" ]; then \
+		echo "Model already exists at models/$$MODEL.gguf"; \
+	else \
+		hf download "hf://$$REPO/$$MODEL.gguf" --local-dir models; \
+		echo "Download complete: models/$$MODEL.gguf"; \
+	fi
+
 # ---------------------------- Default model download ---------------------------------
 download_qwen:
 	@if [ ! -f .env ]; then echo "Error: .env not found. Run 'make copy_env' first." >&2; exit 1; fi
@@ -108,6 +149,6 @@ download_qwen:
 	if [ -f "models/$$MODEL.gguf" ]; then \
 		echo "Model already exists at models/$$MODEL.gguf"; \
 	else \
-		hf download "hf://$$REPO/$$MODEL.gguf" -o models; \
+		hf download "hf://$$REPO/$$MODEL.gguf" --local-dir models; \
 		echo "Download complete: models/$$MODEL.gguf"; \
 	fi

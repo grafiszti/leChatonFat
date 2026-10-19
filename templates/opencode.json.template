@@ -38,6 +38,10 @@
     "browser": {
       "type": "local",
       "command": ["docker", "run", "-i", "--rm", "--network", "lechatonfat_default", "lechatonfat-mcp-browser"]
+    },
+    "rag": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "--network", "lechatonfat_default", "lechatonfat-mcp-rag"]
     }
   }
 }

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Knowledge Base</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+        h1 { margin-bottom: 20px; font-size: 1.4em; }
+        .search { display: flex; gap: 8px; margin-bottom: 20px; }
+        .search input { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .search button { padding: 8px 16px; background: #333; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        .search button:hover { background: #555; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: #fff; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+        th { background: #fafafa; font-weight: 600; }
+        tr:hover { background: #f9f9f9; }
+        .btn { padding: 4px 10px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .btn-del { background: #fee; color: #c33; }
+        .btn-del:hover { background: #fdd; }
+        .chunks { background: #f0f0f0; padding: 12px; border-radius: 4px; margin-bottom: 12px; display: none; }
+        .chunks.open { display: block; }
+        .chunk-item { padding: 6px 0; border-bottom: 1px solid #ddd; font-size: 12px; }
+        .chunk-item:last-child { border-bottom: none; }
+        .results { margin-bottom: 20px; }
+        .result-item { background: #fff; padding: 12px; border-radius: 4px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+        .result-score { color: #888; font-size: 11px; }
+        .result-text { font-size: 13px; margin-top: 4px; }
+        .ingest { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .ingest input[type="text"] { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .ingest input[type="file"] { font-size: 13px; }
+        .ingest button { padding: 8px 16px; background: #2a7; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        .ingest button:hover { background: #196; }
+        .msg { padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; display: none; }
+        .msg.ok { display: block; background: #dfd; color: #272; }
+        .msg.err { display: block; background: #fdd; color: #a33; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>RAG Knowledge Base</h1>
+
+    <div id="msg" class="msg"></div>
+
+    <div class="search">
+        <input type="text" id="search-q" placeholder="Search the knowledge base...">
+        <button onclick="doSearch()">Search</button>
+    </div>
+
+    <div id="results" class="results"></div>
+
+    <div class="ingest">
+        <input type="text" id="ingest-url" placeholder="https://example.com/article">
+        <button onclick="ingestUrl()">Ingest URL</button>
+        <input type="file" id="ingest-file" accept=".pdf,.docx,.md,.txt">
+        <button onclick="ingestFile()">Upload</button>
+    </div>
+
+    <table>
+        <thead><tr><th>Title</th><th>Type</th><th>Chunks</th><th></th></tr></thead>
+        <tbody id="sources"></tbody>
+    </table>
+</div>
+
+<script>
+function showMsg(text, ok=true) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg ' + (ok ? 'ok' : 'err');
+    setTimeout(() => el.className = 'msg', 3000);
+}
+
+async function loadSources() {
+    const res = await fetch('/sources');
+    const sources = await res.json();
+    const tbody = document.getElementById('sources');
+    tbody.innerHTML = '';
+    for (const s of sources) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${s.title || s.id.slice(0,12)+'...'}</td><td>${s.doc_type}</td><td>${s.chunk_count}</td><td><button class="btn btn-del" onclick="delSource('${s.id}')">Delete</button></td>`;
+        tr.style.cursor = 'pointer';
+        tr.onclick = (e) => { if (e.target.tagName !== 'BUTTON') toggleChunks(s.id); };
+        tbody.appendChild(tr);
+    }
+}
+
+async function toggleChunks(id) {
+    let existing = document.getElementById('chunks-' + id);
+    if (existing) { existing.classList.toggle('open'); return; }
+    const res = await fetch('/sources/' + id + '/chunks');
+    const chunks = await res.json();
+    const div = document.createElement('div');
+    div.id = 'chunks-' + id;
+    div.className = 'chunks open';
+    div.innerHTML = chunks.map(c => `<div class="chunk-item"><b>#${c.index}</b> ${c.text.slice(0,200)}...</div>`).join('');
+    document.getElementById('sources').closest('table').insertAdjacentElement('afterend', div);
+}
+
+async function delSource(id) {
+    if (!confirm('Delete this source?')) return;
+    await fetch('/sources/' + id, { method: 'DELETE' });
+    showMsg('Source deleted');
+    loadSources();
+}
+
+async function doSearch() {
+    const q = document.getElementById('search-q').value;
+    if (!q) return;
+    const res = await fetch('/search?q=' + encodeURIComponent(q));
+    const results = await res.json();
+    const el = document.getElementById('results');
+    el.innerHTML = results.map(r => `<div class="result-item"><div>${r.title} <span class="result-score">score: ${r.score.toFixed(3)}</span></div><div class="result-text">${r.text.slice(0,300)}</div></div>`).join('');
+}
+
+async function ingestUrl() {
+    const url = document.getElementById('ingest-url').value;
+    if (!url) return;
+    try {
+        const res = await fetch('/ingest/url', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Ingest failed');
+        showMsg('Ingested: ' + data.chunks + ' chunks');
+        document.getElementById('ingest-url').value = '';
+        loadSources();
+    } catch(e) { showMsg(e.message, false); }
+}
+
+async function ingestFile() {
+    const input = document.getElementById('ingest-file');
+    if (!input.files[0]) return;
+    const fd = new FormData();
+    fd.append('file', input.files[0]);
+    try {
+        const res = await fetch('/ingest/file', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Upload failed');
+        showMsg('Uploaded: ' + data.chunks + ' chunks');
+        input.value = '';
+        loadSources();
+    } catch(e) { showMsg(e.message, false); }
+}
+
+document.getElementById('search-q').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+loadSources();
+</script>
+</body>
+</html>
